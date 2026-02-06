@@ -1,0 +1,40 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+
+# Vendor (if not committed)
+# vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+/bin/
+/dist/
+
+# Coverage
+coverage.out
+coverage.html
+
+# Nix
+result
+result-*
+.direnv/
+
+# Not tracked
+INTEGRATION.md
