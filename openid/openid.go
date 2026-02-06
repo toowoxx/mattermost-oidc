@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/mattermost/mattermost/server/public/model"
@@ -87,8 +88,9 @@ func (p *OpenIDProvider) GetUserFromIdToken(rctx request.CTX, idToken string) (*
 		return nil, nil
 	}
 
-	// Validate exp claim (ParseUnverified doesn't check it despite the option)
-	if _, err := mapClaims.GetExpirationTime(); err != nil {
+	// Validate exp claim: ParseUnverified doesn't enforce expiry, so check manually.
+	exp, err := mapClaims.GetExpirationTime()
+	if err != nil || exp == nil || exp.Before(time.Now()) {
 		return nil, nil
 	}
 
@@ -98,6 +100,13 @@ func (p *OpenIDProvider) GetUserFromIdToken(rctx request.CTX, idToken string) (*
 	// Validate required claims
 	if err = claims.Validate(); err != nil {
 		// Missing required claims in ID token - fall back to UserInfo
+		return nil, nil
+	}
+
+	// If email_verified is absent from the ID token (defaults to false),
+	// fall back to UserInfo which may have it. Avoids marking users
+	// as unverified just because the ID token omitted the claim.
+	if _, hasEmailVerified := mapClaims["email_verified"]; !hasEmailVerified {
 		return nil, nil
 	}
 

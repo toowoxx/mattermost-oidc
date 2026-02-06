@@ -1,38 +1,45 @@
-# Build stage
+# Build stage - compile Mattermost server with OIDC support
 FROM golang:1.24.6-alpine AS builder
 
-# Install build dependencies
 RUN apk add --no-cache git make gcc musl-dev
+
+ARG MATTERMOST_REPO=https://github.com/mattermost/mattermost.git
+ARG MATTERMOST_BRANCH=release-11.0
 
 WORKDIR /build
 
-# Clone Mattermost (using your fork with the OIDC import)
-# In CI, this would be a checkout step instead
-ARG MATTERMOST_REPO=https://github.com/toowoxx/mattermost.git
-ARG MATTERMOST_BRANCH=release-11.0
+# Clone Mattermost (AGPL source only)
 RUN git clone --depth 1 --branch ${MATTERMOST_BRANCH} ${MATTERMOST_REPO} mattermost
 
 # Copy the OIDC module
 COPY . mattermost-oidc/
 
-# Build the server
-WORKDIR /build/mattermost/server
-RUN make config-reset
-RUN make build-linux-amd64
+# Remove enterprise code and apply the OIDC patch
+RUN rm -rf /build/mattermost/server/enterprise \
+    && cd /build/mattermost \
+    && git apply /build/mattermost-oidc/patches/mattermost-v10.11.10.patch \
+    && sed -i '/Enterprise Imports/d; /github.com\/mattermost\/mattermost\/server\/v8\/enterprise/d' \
+    server/cmd/mattermost/main.go
 
-# Runtime stage - use official Mattermost image as base
-FROM mattermost/mattermost-enterprise-edition:11.0
+# Set up Go workspace so the server resolves mattermost-oidc locally
+RUN cat > /build/go.work <<'GOWORK'
+go 1.24.6
+
+use (
+    ./mattermost/server
+    ./mattermost-oidc
+)
+GOWORK
+
+# Build the server binary
+WORKDIR /build/mattermost/server
+ENV GOPRIVATE=github.com/mattermost/* \
+    GONOSUMDB=github.com/mattermost/* \
+    GONOPROXY=github.com/mattermost/*
+RUN go build -o bin/mattermost ./cmd/mattermost
+
+# Runtime stage - use official Mattermost team edition image as base
+FROM mattermost/mattermost-team-edition:11.0
 
 # Copy the custom-built binary with OIDC support
 COPY --from=builder /build/mattermost/server/bin/mattermost /mattermost/bin/mattermost
-
-# Default environment variables for OIDC (can be overridden)
-ENV MM_OPENIDSETTINGS_ENABLE=false \
-    MM_OPENIDSETTINGS_SCOPE="openid email profile" \
-    MM_OPENIDSETTINGS_BUTTONTEXT="Login with SSO" \
-    MM_OPENIDSETTINGS_BUTTONCOLOR="#145DBF"
-
-# Expose ports
-EXPOSE 8065 8067 8074 8075
-
-# Use the default entrypoint from the base image

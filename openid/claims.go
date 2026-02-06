@@ -64,18 +64,6 @@ func (c *OIDCClaims) Validate() error {
 	return nil
 }
 
-// ValidateWithConfig checks claims against the provider configuration.
-// Call this after Validate() to enforce policy like RequireEmailVerified.
-func (c *OIDCClaims) ValidateWithConfig(config *OIDCConfig) error {
-	if err := c.Validate(); err != nil {
-		return err
-	}
-	if config != nil && config.RequireEmailVerified && !c.EmailVerified {
-		return errors.New("OIDC email_verified claim is required but false or missing")
-	}
-	return nil
-}
-
 // ToUser converts OIDC claims to a Mattermost user model.
 // The returned user is suitable for use with the OAuth flow.
 func (c *OIDCClaims) ToUser(logger mlog.LoggerIFace) *model.User {

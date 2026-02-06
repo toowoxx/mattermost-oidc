@@ -16,14 +16,14 @@ Automatic migration links existing user accounts to OIDC based on matching email
 1. User clicks "Login with OIDC"
 2. User authenticates with the IdP
 3. System checks if a user exists with the OIDC `sub` claim
-4. If not found and migration is enabled, searches for user by email
-5. If found with an allowed auth service, updates the user's auth to OIDC
-6. User is logged in with their existing account
+4. If not found, searches for user by email
+5. If found, `IsSameUser` allows migration from any non-OIDC auth service
+6. Core calls `UpdateAuthData` to switch the user to OIDC
+7. User is logged in with their existing account
 
 **Requirements:**
+- The fork patch must be applied (see `patches/`)
 - User's email in Mattermost must match the email from the IdP
-- User's current auth service must be in the allowed migration sources
-- Auto-migration must be explicitly enabled (opt-in)
 
 ### Method 2: Manual Migration
 
@@ -56,21 +56,7 @@ Auto-migration is handled by the `IsSameUser` implementation in the OIDC provide
 
 The fork patch (see `patches/`) removes the guard that blocks email/password users from this flow, enabling migration from any auth service.
 
-### Configuration Options
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `EnableAutoMigration` | bool | `false` | Enable automatic user migration |
-| `MigrationSources` | []string | `[]` | Auth services to migrate from |
-
-### Valid Migration Sources
-
-- `gitlab` - GitLab OAuth/OIDC
-- `email` - Password/email authentication
-- `google` - Google OAuth
-- `office365` - Microsoft Office 365
-- `saml` - SAML authentication
-- `ldap` - LDAP authentication
+Migration is always enabled when the fork patch is applied. All non-OIDC auth services are eligible for migration (GitLab, email/password, Google, Office 365, SAML, LDAP). To disable migration, revert the `user.go` portion of the patch.
 
 ## Migration Scenarios
 
@@ -182,7 +168,7 @@ For users who don't have IdP accounts:
 ### Email Verification
 
 - OIDC migration trusts the IdP's email verification
-- Consider enabling `RequireEmailVerified` for additional security
+- The `email_verified` claim from the IdP is passed through to Mattermost
 
 ### Audit Trail
 
@@ -229,12 +215,12 @@ If you need to roll back a migration:
 ### "User not found for migration"
 
 - Verify the email addresses match exactly (case-insensitive)
-- Check that the auth service is in `MigrationSources`
+- Check that the user is not already on OIDC (different sub = rejected)
 
-### "Migration disabled"
+### "already_attached" error for email/password users
 
-- Set `EnableAutoMigration` to `true`
-- Ensure `MigrationSources` is not empty
+- Ensure the `user.go` portion of the fork patch is applied
+- Without it, Mattermost rejects email/password users before `IsSameUser` is called
 
 ### "User already has OIDC auth"
 
