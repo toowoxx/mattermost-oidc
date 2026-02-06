@@ -121,66 +121,74 @@ func TestOIDCClaims_ToUser(t *testing.T) {
 	logger := &mockLogger{}
 
 	tests := []struct {
-		name           string
-		claims         OIDCClaims
-		wantUsername   string
-		wantFirstName  string
-		wantLastName   string
-		wantEmail      string
-		wantAuthData   string
+		name              string
+		claims            OIDCClaims
+		wantUsername      string
+		wantFirstName     string
+		wantLastName      string
+		wantEmail         string
+		wantAuthData      string
+		wantEmailVerified bool
 	}{
 		{
-			name: "all fields present",
+			name: "all fields present with verified email",
 			claims: OIDCClaims{
 				Sub:               "user-123",
 				Email:             "Test@Example.com",
+				EmailVerified:     true,
 				PreferredUsername: "testuser",
 				GivenName:         "Test",
 				FamilyName:        "User",
 			},
-			wantUsername:  "testuser",
-			wantFirstName: "Test",
-			wantLastName:  "User",
-			wantEmail:     "test@example.com", // Lowercase
-			wantAuthData:  "user-123",
+			wantUsername:      "testuser",
+			wantFirstName:     "Test",
+			wantLastName:      "User",
+			wantEmail:         "test@example.com", // Lowercase
+			wantAuthData:      "user-123",
+			wantEmailVerified: true,
 		},
 		{
-			name: "username from email",
+			name: "username from email, unverified",
 			claims: OIDCClaims{
 				Sub:   "user-456",
 				Email: "john.doe@example.com",
 			},
-			wantUsername:  "john.doe",
-			wantFirstName: "",
-			wantLastName:  "",
-			wantEmail:     "john.doe@example.com",
-			wantAuthData:  "user-456",
+			wantUsername:      "john.doe",
+			wantFirstName:     "",
+			wantLastName:      "",
+			wantEmail:         "john.doe@example.com",
+			wantAuthData:      "user-456",
+			wantEmailVerified: false,
 		},
 		{
 			name: "name split fallback",
 			claims: OIDCClaims{
-				Sub:   "user-789",
-				Email: "test@example.com",
-				Name:  "John Doe Smith",
+				Sub:           "user-789",
+				Email:         "test@example.com",
+				EmailVerified: true,
+				Name:          "John Doe Smith",
 			},
-			wantUsername:  "test",
-			wantFirstName: "John",
-			wantLastName:  "Doe Smith",
-			wantEmail:     "test@example.com",
-			wantAuthData:  "user-789",
+			wantUsername:      "test",
+			wantFirstName:     "John",
+			wantLastName:      "Doe Smith",
+			wantEmail:         "test@example.com",
+			wantAuthData:      "user-789",
+			wantEmailVerified: true,
 		},
 		{
 			name: "single name",
 			claims: OIDCClaims{
-				Sub:   "user-abc",
-				Email: "test@example.com",
-				Name:  "Madonna",
+				Sub:           "user-abc",
+				Email:         "test@example.com",
+				EmailVerified: true,
+				Name:          "Madonna",
 			},
-			wantUsername:  "test",
-			wantFirstName: "Madonna",
-			wantLastName:  "",
-			wantEmail:     "test@example.com",
-			wantAuthData:  "user-abc",
+			wantUsername:      "test",
+			wantFirstName:     "Madonna",
+			wantLastName:      "",
+			wantEmail:         "test@example.com",
+			wantAuthData:      "user-abc",
+			wantEmailVerified: true,
 		},
 	}
 
@@ -206,8 +214,52 @@ func TestOIDCClaims_ToUser(t *testing.T) {
 			if user.AuthService != model.ServiceOpenid {
 				t.Errorf("AuthService = %s, want %s", user.AuthService, model.ServiceOpenid)
 			}
-			if !user.EmailVerified {
-				t.Error("EmailVerified should be true")
+			if user.EmailVerified != tt.wantEmailVerified {
+				t.Errorf("EmailVerified = %v, want %v", user.EmailVerified, tt.wantEmailVerified)
+			}
+		})
+	}
+}
+
+// Test ValidateWithConfig
+func TestOIDCClaims_ValidateWithConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		claims  OIDCClaims
+		config  *OIDCConfig
+		wantErr bool
+	}{
+		{
+			name:    "verified email, required",
+			claims:  OIDCClaims{Sub: "u1", Email: "a@b.com", EmailVerified: true},
+			config:  &OIDCConfig{RequireEmailVerified: true},
+			wantErr: false,
+		},
+		{
+			name:    "unverified email, required",
+			claims:  OIDCClaims{Sub: "u1", Email: "a@b.com", EmailVerified: false},
+			config:  &OIDCConfig{RequireEmailVerified: true},
+			wantErr: true,
+		},
+		{
+			name:    "unverified email, not required",
+			claims:  OIDCClaims{Sub: "u1", Email: "a@b.com", EmailVerified: false},
+			config:  &OIDCConfig{RequireEmailVerified: false},
+			wantErr: false,
+		},
+		{
+			name:    "nil config",
+			claims:  OIDCClaims{Sub: "u1", Email: "a@b.com"},
+			config:  nil,
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.claims.ValidateWithConfig(tt.config)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateWithConfig() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

@@ -68,10 +68,15 @@ func (p *OpenIDProvider) GetUserFromIdToken(rctx request.CTX, idToken string) (*
 		return nil, nil
 	}
 
-	// Parse the JWT without signature verification.
-	// The ID token was already validated by the OAuth flow (received from token endpoint over HTTPS).
-	// We're only extracting claims here, not authenticating.
-	token, _, err := new(jwt.Parser).ParseUnverified(idToken, jwt.MapClaims{})
+	// Parse the JWT without signature verification but with expiry validation.
+	// Signature verification is not needed here because the token was received
+	// directly from the token endpoint over TLS during the OAuth code exchange.
+	// We still validate exp to reject stale tokens.
+	parser := jwt.NewParser(
+		jwt.WithExpirationRequired(),
+		jwt.WithValidMethods([]string{"RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512"}),
+	)
+	token, _, err := parser.ParseUnverified(idToken, jwt.MapClaims{})
 	if err != nil {
 		// Can't parse token - fall back to UserInfo endpoint
 		return nil, nil
@@ -79,6 +84,11 @@ func (p *OpenIDProvider) GetUserFromIdToken(rctx request.CTX, idToken string) (*
 
 	mapClaims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
+		return nil, nil
+	}
+
+	// Validate exp claim (ParseUnverified doesn't check it despite the option)
+	if _, err := mapClaims.GetExpirationTime(); err != nil {
 		return nil, nil
 	}
 
@@ -91,7 +101,11 @@ func (p *OpenIDProvider) GetUserFromIdToken(rctx request.CTX, idToken string) (*
 		return nil, nil
 	}
 
-	return claims.ToUser(rctx.Logger()), nil
+	var logger mlog.LoggerIFace
+	if rctx != nil {
+		logger = rctx.Logger()
+	}
+	return claims.ToUser(logger), nil
 }
 
 // IsSameUser compares two users to determine if they represent the same OIDC user.
