@@ -16,9 +16,7 @@ import (
 	"encoding/json"
 	"io"
 	"strings"
-	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/shared/mlog"
 	"github.com/mattermost/mattermost/server/public/shared/request"
@@ -58,63 +56,17 @@ func (p *OpenIDProvider) GetSSOSettings(_ request.CTX, config *model.Config, ser
 	return &config.OpenIdSettings, nil
 }
 
-// GetUserFromIdToken parses the JWT ID token to extract user claims.
-// This is an optimization that allows extracting user info directly from the ID token
-// instead of making an additional UserInfo endpoint request.
+// GetUserFromIdToken is not implemented. We always return (nil, nil) to let
+// Mattermost core fall back to the UserInfo endpoint.
 //
-// Returns (nil, nil) if the ID token cannot be parsed or is empty,
-// in which case the core will fall back to the UserInfo endpoint.
-func (p *OpenIDProvider) GetUserFromIdToken(rctx request.CTX, idToken string) (*model.User, error) {
-	if idToken == "" {
-		return nil, nil
-	}
-
-	// Parse the JWT without signature verification but with expiry validation.
-	// Signature verification is not needed here because the token was received
-	// directly from the token endpoint over TLS during the OAuth code exchange.
-	// We still validate exp to reject stale tokens.
-	parser := jwt.NewParser(
-		jwt.WithExpirationRequired(),
-		jwt.WithValidMethods([]string{"RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512"}),
-	)
-	token, _, err := parser.ParseUnverified(idToken, jwt.MapClaims{})
-	if err != nil {
-		// Can't parse token - fall back to UserInfo endpoint
-		return nil, nil
-	}
-
-	mapClaims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return nil, nil
-	}
-
-	// Validate exp claim: ParseUnverified doesn't enforce expiry, so check manually.
-	exp, err := mapClaims.GetExpirationTime()
-	if err != nil || exp == nil || exp.Before(time.Now()) {
-		return nil, nil
-	}
-
-	// Convert map claims to our struct
-	claims := mapClaimsToOIDCClaims(mapClaims)
-
-	// Validate required claims
-	if err = claims.Validate(); err != nil {
-		// Missing required claims in ID token - fall back to UserInfo
-		return nil, nil
-	}
-
-	// If email_verified is absent from the ID token (defaults to false),
-	// fall back to UserInfo which may have it. Avoids marking users
-	// as unverified just because the ID token omitted the claim.
-	if _, hasEmailVerified := mapClaims["email_verified"]; !hasEmailVerified {
-		return nil, nil
-	}
-
-	var logger mlog.LoggerIFace
-	if rctx != nil {
-		logger = rctx.Logger()
-	}
-	return claims.ToUser(logger), nil
+// Mattermost core passes the raw ID token from the token endpoint without any
+// validation (no signature, iss, or aud checks). While the token is received
+// over TLS, we cannot verify it properly without access to the IdP's JWKS and
+// expected issuer/audience values — which are not available in this method's
+// interface. Rather than parse unverified JWTs, we skip this optimization and
+// rely on the authenticated UserInfo endpoint instead.
+func (p *OpenIDProvider) GetUserFromIdToken(_ request.CTX, _ string) (*model.User, error) {
+	return nil, nil
 }
 
 // IsSameUser compares two users to determine if they represent the same OIDC user.
@@ -148,43 +100,6 @@ func (p *OpenIDProvider) IsSameUser(_ request.CTX, dbUser, oAuthUser *model.User
 	}
 
 	return false
-}
-
-// mapClaimsToOIDCClaims converts JWT map claims to our structured OIDCClaims.
-func mapClaimsToOIDCClaims(claims jwt.MapClaims) *OIDCClaims {
-	oidcClaims := &OIDCClaims{}
-
-	if sub, ok := claims["sub"].(string); ok {
-		oidcClaims.Sub = sub
-	}
-	if email, ok := claims["email"].(string); ok {
-		oidcClaims.Email = email
-	}
-	switch v := claims["email_verified"].(type) {
-	case bool:
-		oidcClaims.EmailVerified = v
-	case string:
-		oidcClaims.EmailVerified = v == "true"
-	case float64:
-		oidcClaims.EmailVerified = v != 0
-	}
-	if preferredUsername, ok := claims["preferred_username"].(string); ok {
-		oidcClaims.PreferredUsername = preferredUsername
-	}
-	if givenName, ok := claims["given_name"].(string); ok {
-		oidcClaims.GivenName = givenName
-	}
-	if familyName, ok := claims["family_name"].(string); ok {
-		oidcClaims.FamilyName = familyName
-	}
-	if name, ok := claims["name"].(string); ok {
-		oidcClaims.Name = name
-	}
-	if picture, ok := claims["picture"].(string); ok {
-		oidcClaims.Picture = picture
-	}
-
-	return oidcClaims
 }
 
 // OIDCClaimsFromJSON parses OIDC claims from a JSON byte slice.

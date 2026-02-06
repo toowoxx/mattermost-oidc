@@ -3,7 +3,6 @@ module github.com/toowoxx/mattermost-oidc
 go 1.24.6
 
 require (
-	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/mattermost/mattermost/server/public v0.1.12
 	github.com/mattermost/mattermost/server/v8 v8.0.0-20260204120044-fddd4a70bcb3
 )

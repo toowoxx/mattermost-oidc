@@ -37,7 +37,7 @@ FROM golang:1.24.6-alpine AS builder
 RUN apk add --no-cache git make gcc musl-dev
 
 ARG MATTERMOST_REPO=https://github.com/mattermost/mattermost.git
-ARG MATTERMOST_BRANCH=release-11.0
+ARG MATTERMOST_BRANCH=v10.11.10
 
 WORKDIR /build
 
@@ -71,7 +71,7 @@ ENV GOPRIVATE=github.com/mattermost/* \
 RUN go build -o bin/mattermost ./cmd/mattermost
 
 # Runtime stage
-FROM mattermost/mattermost-team-edition:11.0
+FROM mattermost/mattermost-team-edition:10.11.10
 
 # Copy custom binary
 COPY --from=builder /build/mattermost/server/bin/mattermost /mattermost/bin/mattermost
