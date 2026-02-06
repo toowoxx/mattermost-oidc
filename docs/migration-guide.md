@@ -52,26 +52,9 @@ WHERE Email = 'john.doe@example.com';
 
 ### Enabling Auto-Migration
 
-Auto-migration is configured via plugin settings. Add to your `config.json`:
+Auto-migration is handled by the `IsSameUser` implementation in the OIDC provider. When a user logs in via OIDC and an existing user with the same email is found, the provider allows the migration by returning `true` from `IsSameUser`. Mattermost core then calls `UpdateAuthData` to switch the user to OIDC.
 
-```json
-{
-  "PluginSettings": {
-    "Plugins": {
-      "com.toowoxx.mattermost-oidc": {
-        "EnableAutoMigration": true,
-        "MigrationSources": ["gitlab", "email"]
-      }
-    }
-  }
-}
-```
-
-Or via environment variables:
-```bash
-MM_PLUGINSETTINGS_PLUGINS_COM_TOOWOXX_MATTERMOST_OIDC_ENABLEAUTOMIGRATION=true
-MM_PLUGINSETTINGS_PLUGINS_COM_TOOWOXX_MATTERMOST_OIDC_MIGRATIONSOURCES='["gitlab", "email"]'
-```
+The fork patch (see `patches/`) removes the guard that blocks email/password users from this flow, enabling migration from any auth service.
 
 ### Configuration Options
 
@@ -95,24 +78,10 @@ MM_PLUGINSETTINGS_PLUGINS_COM_TOOWOXX_MATTERMOST_OIDC_MIGRATIONSOURCES='["gitlab
 
 **Use case:** You're switching from GitLab's OAuth to a dedicated IdP (e.g., Keycloak).
 
-**Configuration:**
-```json
-{
-  "PluginSettings": {
-    "Plugins": {
-      "com.toowoxx.mattermost-oidc": {
-        "EnableAutoMigration": true,
-        "MigrationSources": ["gitlab"]
-      }
-    }
-  }
-}
-```
-
 **Process:**
-1. Set up the new OIDC provider in Mattermost
-2. Ensure all users exist in the new IdP with matching emails
-3. Enable auto-migration
+1. Apply the fork patch and build Mattermost with the OIDC module
+2. Configure `OpenIdSettings` in `config.json` (see README)
+3. Ensure all users exist in the new IdP with matching emails
 4. Users log in via the new OIDC button
 5. Their GitLab SSO accounts are automatically migrated
 6. After migration, optionally disable GitLab OAuth
@@ -121,24 +90,10 @@ MM_PLUGINSETTINGS_PLUGINS_COM_TOOWOXX_MATTERMOST_OIDC_MIGRATIONSOURCES='["gitlab
 
 **Use case:** You want to move users from password authentication to SSO.
 
-**Configuration:**
-```json
-{
-  "PluginSettings": {
-    "Plugins": {
-      "com.toowoxx.mattermost-oidc": {
-        "EnableAutoMigration": true,
-        "MigrationSources": ["email"]
-      }
-    }
-  }
-}
-```
-
 **Process:**
-1. Configure OIDC authentication
-2. Create users in your IdP with matching emails
-3. Enable auto-migration for email auth
+1. Apply the fork patch and build Mattermost with the OIDC module
+2. Configure `OpenIdSettings` in `config.json` (see README)
+3. Create users in your IdP with matching emails
 4. Users log in via OIDC
 5. Their password accounts are migrated to OIDC
 6. Optionally disable email/password authentication
@@ -147,19 +102,7 @@ MM_PLUGINSETTINGS_PLUGINS_COM_TOOWOXX_MATTERMOST_OIDC_MIGRATIONSOURCES='["gitlab
 
 **Use case:** You have users on both GitLab SSO and password auth.
 
-**Configuration:**
-```json
-{
-  "PluginSettings": {
-    "Plugins": {
-      "com.toowoxx.mattermost-oidc": {
-        "EnableAutoMigration": true,
-        "MigrationSources": ["gitlab", "email"]
-      }
-    }
-  }
-}
-```
+Migration from multiple sources works out of the box — the `IsSameUser` implementation allows migration from any non-OIDC auth service.
 
 ## Pre-Migration Checklist
 
@@ -193,18 +136,7 @@ After migration is complete:
    - GitLab: Set `GitLabSettings.Enable` to `false`
    - Email: Set `EmailSettings.EnableSignUpWithEmail` to `false`
 
-4. **Disable auto-migration:**
-   ```json
-   {
-     "PluginSettings": {
-       "Plugins": {
-         "com.toowoxx.mattermost-oidc": {
-           "EnableAutoMigration": false
-         }
-       }
-     }
-   }
-   ```
+4. **Revert the fork patch** (optional): Once all users are migrated, you can revert the `user.go` change to restore the original email-user guard. The `main.go` and `go.mod` changes should remain.
 
 ## Handling Edge Cases
 

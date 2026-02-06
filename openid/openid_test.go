@@ -265,74 +265,6 @@ func TestOIDCClaims_ValidateWithConfig(t *testing.T) {
 	}
 }
 
-// Test PKCE generation
-func TestGeneratePKCE(t *testing.T) {
-	pkce, err := GeneratePKCE()
-	if err != nil {
-		t.Fatalf("GeneratePKCE failed: %v", err)
-	}
-
-	// Check verifier length
-	if len(pkce.CodeVerifier) < 43 || len(pkce.CodeVerifier) > 128 {
-		t.Errorf("CodeVerifier length %d not in range [43, 128]", len(pkce.CodeVerifier))
-	}
-
-	// Check challenge is not empty
-	if pkce.CodeChallenge == "" {
-		t.Error("CodeChallenge is empty")
-	}
-
-	// Check challenge method
-	if pkce.ChallengeMethod != PKCEChallengeMethodS256 {
-		t.Errorf("ChallengeMethod = %s, want %s", pkce.ChallengeMethod, PKCEChallengeMethodS256)
-	}
-
-	// Verify challenge matches verifier
-	if !ValidatePKCE(pkce.CodeVerifier, pkce.CodeChallenge) {
-		t.Error("PKCE validation failed")
-	}
-}
-
-// Test PKCE validation
-func TestValidatePKCE(t *testing.T) {
-	// Known test vectors (from RFC 7636 Appendix B)
-	// For actual implementation, we generate our own
-
-	pkce, _ := GeneratePKCE()
-
-	// Correct validation
-	if !ValidatePKCE(pkce.CodeVerifier, pkce.CodeChallenge) {
-		t.Error("Valid PKCE should pass validation")
-	}
-
-	// Wrong verifier
-	if ValidatePKCE("wrong-verifier", pkce.CodeChallenge) {
-		t.Error("Invalid verifier should fail validation")
-	}
-
-	// Wrong challenge
-	if ValidatePKCE(pkce.CodeVerifier, "wrong-challenge") {
-		t.Error("Invalid challenge should fail validation")
-	}
-}
-
-// Test PKCE uniqueness
-func TestGeneratePKCE_Uniqueness(t *testing.T) {
-	seen := make(map[string]bool)
-
-	for i := 0; i < 100; i++ {
-		pkce, err := GeneratePKCE()
-		if err != nil {
-			t.Fatalf("GeneratePKCE failed: %v", err)
-		}
-
-		if seen[pkce.CodeVerifier] {
-			t.Error("Generated duplicate code verifier")
-		}
-		seen[pkce.CodeVerifier] = true
-	}
-}
-
 // Test discovery endpoint construction
 func TestDiscoveryEndpointFromIssuer(t *testing.T) {
 	tests := []struct {
@@ -367,9 +299,6 @@ func TestDiscoveryEndpointFromIssuer(t *testing.T) {
 func TestDefaultOIDCConfig(t *testing.T) {
 	config := DefaultOIDCConfig()
 
-	if !config.EnablePKCE {
-		t.Error("EnablePKCE should default to true")
-	}
 	if config.EnableAutoMigration {
 		t.Error("EnableAutoMigration should default to false")
 	}
@@ -727,13 +656,6 @@ func TestShouldAttemptMigration(t *testing.T) {
 				t.Errorf("ShouldAttemptMigration() = %v, want %v", got, tt.want)
 			}
 		})
-	}
-}
-
-// Benchmark PKCE generation
-func BenchmarkGeneratePKCE(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		GeneratePKCE()
 	}
 }
 

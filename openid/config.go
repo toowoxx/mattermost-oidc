@@ -6,10 +6,6 @@ package openid
 // OIDCConfig holds OIDC-specific configuration settings.
 // These settings extend the base Mattermost OpenIdSettings.
 type OIDCConfig struct {
-	// EnablePKCE enables PKCE (Proof Key for Code Exchange) for the authorization code flow.
-	// Recommended for security. Default: true
-	EnablePKCE bool `json:"EnablePKCE"`
-
 	// EnableAutoMigration enables automatic migration of users from other auth services
 	// when they log in via OIDC with a matching email address.
 	// Default: false (opt-in for safety)
@@ -30,7 +26,6 @@ type OIDCConfig struct {
 // DefaultOIDCConfig returns the default OIDC configuration.
 func DefaultOIDCConfig() *OIDCConfig {
 	return &OIDCConfig{
-		EnablePKCE:           true,
 		EnableAutoMigration:  false,
 		MigrationSources:     []string{},
 		RequireEmailVerified: false,

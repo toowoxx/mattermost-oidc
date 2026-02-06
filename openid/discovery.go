@@ -171,14 +171,3 @@ func GetDiscovery(discoveryEndpoint string) (*OIDCDiscovery, error) {
 	return DefaultDiscoveryCache.GetDiscovery(discoveryEndpoint)
 }
 
-// SupportsPKCE checks if the OIDC provider supports PKCE with S256 method.
-func (d *OIDCDiscovery) SupportsPKCE() bool {
-	for _, method := range d.CodeChallengeMethodsSupported {
-		if method == PKCEChallengeMethodS256 {
-			return true
-		}
-	}
-	// If not explicitly listed, many providers still support it
-	// Return true as a safe default (PKCE adds security, doesn't break non-supporting providers)
-	return len(d.CodeChallengeMethodsSupported) == 0
-}

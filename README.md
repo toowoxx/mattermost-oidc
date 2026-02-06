@@ -5,11 +5,10 @@ A generic OpenID Connect (OIDC) SSO provider for Mattermost that works with any 
 ## Features
 
 - **Universal OIDC Support**: Works with Keycloak, Auth0, GitLab, Azure AD, Google, Okta, and any OIDC-compliant provider
-- **PKCE Support**: Proof Key for Code Exchange for enhanced security
 - **OIDC Discovery**: Automatic endpoint configuration via `.well-known/openid-configuration`
 - **User Migration**: Optional migration from GitLab SSO or password auth (email-based linking)
 - **Attribute Sync**: Automatic user attribute synchronization on each login
-- **Minimal Fork Changes**: Only 3 lines changed in the Mattermost fork
+- **Minimal Fork Changes**: Small patch to the Mattermost fork (see `patches/`)
 
 ## Compatibility
 
@@ -121,7 +120,6 @@ make build
 
 ## Security
 
-- **PKCE**: Enabled by default for authorization code flow protection
 - **State Validation**: Built into Mattermost OAuth core (3-factor validation)
 - **Stable Identifiers**: Uses OIDC `sub` claim (never email/username which can change)
 - **HTTPS**: All OIDC endpoints must use HTTPS

@@ -200,10 +200,6 @@ The username is then sanitized:
 
 ## Security Considerations
 
-### PKCE (Proof Key for Code Exchange)
-
-PKCE is enabled by default and provides protection against authorization code interception attacks. This is the recommended configuration for all deployments.
-
 ### State Parameter
 
 The Mattermost OAuth implementation includes built-in state parameter validation:
