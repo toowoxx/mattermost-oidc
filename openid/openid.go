@@ -151,8 +151,13 @@ func mapClaimsToOIDCClaims(claims jwt.MapClaims) *OIDCClaims {
 	if email, ok := claims["email"].(string); ok {
 		oidcClaims.Email = email
 	}
-	if emailVerified, ok := claims["email_verified"].(bool); ok {
-		oidcClaims.EmailVerified = emailVerified
+	switch v := claims["email_verified"].(type) {
+	case bool:
+		oidcClaims.EmailVerified = v
+	case string:
+		oidcClaims.EmailVerified = v == "true"
+	case float64:
+		oidcClaims.EmailVerified = v != 0
 	}
 	if preferredUsername, ok := claims["preferred_username"].(string); ok {
 		oidcClaims.PreferredUsername = preferredUsername

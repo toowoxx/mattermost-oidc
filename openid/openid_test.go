@@ -5,11 +5,11 @@ package openid
 
 import (
 	"bytes"
-	"encoding/json"
 	"log"
 	"strings"
 	"testing"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/shared/mlog"
 )
@@ -589,7 +589,7 @@ func TestNormalizeEmail(t *testing.T) {
 
 // Test mapClaimsToOIDCClaims
 func TestMapClaimsToOIDCClaims(t *testing.T) {
-	mapClaims := map[string]interface{}{
+	jwtClaims := jwt.MapClaims{
 		"sub":                "user-123",
 		"email":              "test@example.com",
 		"email_verified":     true,
@@ -600,28 +600,62 @@ func TestMapClaimsToOIDCClaims(t *testing.T) {
 		"picture":            "https://example.com/photo.jpg",
 	}
 
-	// Need to convert to json.MapClaims type
-	jsonBytes, _ := json.Marshal(mapClaims)
-	var jwtMapClaims map[string]interface{}
-	json.Unmarshal(jsonBytes, &jwtMapClaims)
-
-	// Test the function manually since we can't easily use jwt.MapClaims
-	claims := &OIDCClaims{
-		Sub:               "user-123",
-		Email:             "test@example.com",
-		EmailVerified:     true,
-		PreferredUsername: "testuser",
-		GivenName:         "Test",
-		FamilyName:        "User",
-		Name:              "Test User",
-		Picture:           "https://example.com/photo.jpg",
-	}
+	claims := mapClaimsToOIDCClaims(jwtClaims)
 
 	if claims.Sub != "user-123" {
 		t.Errorf("Sub = %s, want user-123", claims.Sub)
 	}
+	if claims.Email != "test@example.com" {
+		t.Errorf("Email = %s, want test@example.com", claims.Email)
+	}
 	if !claims.EmailVerified {
 		t.Error("EmailVerified should be true")
+	}
+	if claims.PreferredUsername != "testuser" {
+		t.Errorf("PreferredUsername = %s, want testuser", claims.PreferredUsername)
+	}
+	if claims.GivenName != "Test" {
+		t.Errorf("GivenName = %s, want Test", claims.GivenName)
+	}
+	if claims.FamilyName != "User" {
+		t.Errorf("FamilyName = %s, want User", claims.FamilyName)
+	}
+	if claims.Name != "Test User" {
+		t.Errorf("Name = %s, want Test User", claims.Name)
+	}
+	if claims.Picture != "https://example.com/photo.jpg" {
+		t.Errorf("Picture = %s, want https://example.com/photo.jpg", claims.Picture)
+	}
+}
+
+// Test mapClaimsToOIDCClaims handles email_verified type variants
+func TestMapClaimsToOIDCClaims_EmailVerifiedTypes(t *testing.T) {
+	tests := []struct {
+		name  string
+		value interface{}
+		want  bool
+	}{
+		{"bool true", true, true},
+		{"bool false", false, false},
+		{"string true", "true", true},
+		{"string false", "false", false},
+		{"float64 1", float64(1), true},
+		{"float64 0", float64(0), false},
+		{"nil", nil, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			jwtClaims := jwt.MapClaims{
+				"sub":            "u1",
+				"email":          "a@b.com",
+				"email_verified": tt.value,
+			}
+			claims := mapClaimsToOIDCClaims(jwtClaims)
+			if claims.EmailVerified != tt.want {
+				t.Errorf("EmailVerified = %v, want %v", claims.EmailVerified, tt.want)
+			}
+		})
 	}
 }
 
