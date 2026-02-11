@@ -26,6 +26,24 @@ index 5fb4b4a005..7c38d2aa5a 100644
  	// Enterprise Imports
  	_ "github.com/mattermost/mattermost/server/v8/enterprise"
  )
+diff --git a/server/config/client.go b/server/config/client.go
+index 7ee4e7b4f0..2894db10f7 100644
+--- a/server/config/client.go
++++ b/server/config/client.go
+@@ -345,9 +345,10 @@ func GenerateLimitedClientConfig(c *model.Config, telemetryID string, license *m
+ 	props["SamlLoginButtonTextColor"] = ""
+ 	props["EnableSignUpWithGoogle"] = "false"
+ 	props["EnableSignUpWithOffice365"] = "false"
+-	props["EnableSignUpWithOpenId"] = "false"
+-	props["OpenIdButtonText"] = ""
+-	props["OpenIdButtonColor"] = ""
++	// OIDC module: expose OpenID SSO settings without license
++	props["EnableSignUpWithOpenId"] = strconv.FormatBool(*c.OpenIdSettings.Enable)
++	props["OpenIdButtonColor"] = *c.OpenIdSettings.ButtonColor
++	props["OpenIdButtonText"] = *c.OpenIdSettings.ButtonText
+ 	props["CWSURL"] = ""
+ 	props["EnableCustomBrand"] = strconv.FormatBool(*c.TeamSettings.EnableCustomBrand)
+ 	props["CustomBrandText"] = *c.TeamSettings.CustomBrandText
 diff --git a/server/go.mod b/server/go.mod
 index fc0181e4ad..235fcf5e75 100644
 --- a/server/go.mod
