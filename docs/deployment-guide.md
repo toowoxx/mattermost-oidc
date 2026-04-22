@@ -6,20 +6,40 @@ This guide covers building and deploying Mattermost with the OIDC SSO provider.
 
 ### Option 1: Local Build
 
-Build Mattermost locally with the OIDC module:
+Build Mattermost locally with the OIDC module. There is no Mattermost fork — the integration is a `git apply` against an upstream checkout.
 
 ```bash
-# Clone the Mattermost fork
-git clone https://github.com/toowoxx/mattermost.git
-cd mattermost
+# Clone upstream Mattermost at the version the patch targets
+git clone --depth 1 --branch v10.11.10 https://github.com/mattermost/mattermost.git
 
-# Clone the OIDC module alongside (not inside)
-cd ..
+# Clone the OIDC module as a sibling (not inside)
 git clone https://github.com/toowoxx/mattermost-oidc.git
+
+# Apply the OIDC patch (go.mod require/replace, main.go import,
+# user.go email-migration change, and client.go license-gate bypass)
+cd mattermost
+git apply ../mattermost-oidc/patches/mattermost-v10.11.10.patch
+
+# (Optional) AGPL-only build: remove enterprise and strip its import
+rm -rf server/enterprise
+sed -i '/Enterprise Imports/d; /github.com\/mattermost\/mattermost\/server\/v8\/enterprise/d' \
+    server/cmd/mattermost/main.go
+
+# Set up a go.work at the common parent so the server resolves
+# mattermost-oidc locally (Mattermost doesn't publish server/v8 via the proxy)
+cd ..
+cat > go.work <<'EOF'
+go 1.24.6
+
+use (
+    ./mattermost/server
+    ./mattermost-oidc
+)
+EOF
 
 # Build
 cd mattermost/server
-make build-linux-amd64  # or make build for current platform
+GOPRIVATE='github.com/mattermost/*' make build-linux-amd64
 
 # The binary is at ./bin/mattermost
 ```

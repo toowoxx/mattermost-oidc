@@ -33,26 +33,45 @@ go test ./...
 go build ./...
 ```
 
-### 3. Add to Mattermost fork
+### 3. Apply the patch to upstream Mattermost
 
-Add to `server/go.mod`:
-```go
-require github.com/toowoxx/mattermost-oidc v0.0.0
+There is no Mattermost fork — the integration is a `git apply` against an upstream checkout. Clone it as a sibling of this repository:
 
-replace github.com/toowoxx/mattermost-oidc => ../mattermost-oidc
+```bash
+git clone --depth 1 --branch v10.11.10 https://github.com/mattermost/mattermost.git ../mattermost
 ```
 
-**Important:** Mattermost doesn't publish `server/v8` to the Go module proxy. Set `GOPRIVATE=github.com/mattermost/*` when building.
+Apply the OIDC patch. It adds the `go.mod` `require`/`replace`, the `main.go` blank import, removes the email-user guard in `user.go`, and opens the OpenID frontend props without a license check:
 
-Add to `server/cmd/mattermost/main.go`:
-```go
-import (
-    // ... existing imports ...
-    _ "github.com/toowoxx/mattermost-oidc/openid"
+```bash
+cd ../mattermost && git apply ../mattermost-oidc/patches/mattermost-v10.11.10.patch
+```
+
+(Optional) For an AGPL-only build, remove the enterprise directory and strip its import:
+
+```bash
+rm -rf server/enterprise
+sed -i '/Enterprise Imports/d; /github.com\/mattermost\/mattermost\/server\/v8\/enterprise/d' \
+  server/cmd/mattermost/main.go
+```
+
+Create a `go.work` in the common parent so the server resolves `mattermost-oidc` locally:
+
+```bash
+cd ..
+cat > go.work <<'EOF'
+go 1.24.6
+
+use (
+    ./mattermost/server
+    ./mattermost-oidc
 )
+EOF
 ```
 
-### 3. Configure Mattermost
+**Note:** Mattermost doesn't publish `server/v8` to the Go module proxy. Set `GOPRIVATE=github.com/mattermost/*` when building.
+
+### 4. Configure Mattermost
 
 In `config.json` or via environment variables:
 
@@ -78,7 +97,7 @@ MM_OPENIDSETTINGS_SECRET=your-client-secret
 MM_OPENIDSETTINGS_DISCOVERYENDPOINT=https://your-idp.com/.well-known/openid-configuration
 ```
 
-### 4. Build and run
+### 5. Build and run
 
 ```bash
 cd mattermost/server
