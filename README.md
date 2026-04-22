@@ -12,8 +12,7 @@ A generic OpenID Connect (OIDC) SSO provider for Mattermost that works with any 
 
 ## Compatibility
 
-- Mattermost v10.11+
-- Mattermost v11.0+
+- Mattermost v10.11.10 (the version the current patch targets)
 - Go 1.24.6+
 
 ## Quick Start

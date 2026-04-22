@@ -124,69 +124,6 @@ docker build --build-arg MM_VERSION=10.11.10 -t your-registry/mattermost-oidc:10
 docker push your-registry/mattermost-oidc:10.11.10
 ```
 
-### Option 3: GitHub Actions CI/CD
-
-**`.github/workflows/build.yml`:**
-
-```yaml
-name: Build Mattermost with OIDC
-
-on:
-  push:
-    branches: [main]
-    tags: ['v*']
-  pull_request:
-    branches: [main]
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout OIDC module
-        uses: actions/checkout@v4
-
-      - name: Checkout Mattermost fork
-        uses: actions/checkout@v4
-        with:
-          repository: toowoxx/mattermost
-          path: mattermost
-          ref: release-11.0
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24.6'
-
-      - name: Build server
-        run: |
-          cd mattermost/server
-          make build-linux-amd64
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-```
-
 ## Deployment Methods
 
 ### Docker Compose
