@@ -52,8 +52,20 @@ func (p *OpenIDProvider) GetUserFromJSON(rctx request.CTX, data io.Reader, token
 }
 
 // GetSSOSettings returns the OpenID settings from the Mattermost config.
+// If DiscoveryEndpoint is configured, the authorization, token, and userinfo
+// endpoints are resolved from the OIDC discovery document automatically.
 func (p *OpenIDProvider) GetSSOSettings(_ request.CTX, config *model.Config, service string) (*model.SSOSettings, error) {
-	return &config.OpenIdSettings, nil
+	sso := config.OpenIdSettings
+	if sso.DiscoveryEndpoint != nil && *sso.DiscoveryEndpoint != "" {
+		doc, err := GetDiscovery(*sso.DiscoveryEndpoint)
+		if err != nil {
+			return nil, err
+		}
+		sso.AuthEndpoint = &doc.AuthorizationEndpoint
+		sso.TokenEndpoint = &doc.TokenEndpoint
+		sso.UserAPIEndpoint = &doc.UserInfoEndpoint
+	}
+	return &sso, nil
 }
 
 // GetUserFromIdToken is not implemented. We always return (nil, nil) to let
