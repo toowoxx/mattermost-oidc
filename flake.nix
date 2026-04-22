@@ -1,5 +1,5 @@
 {
-  description = "Mattermost OIDC SSO Provider";
+  description = "OIDC SSO Provider for Mattermost";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

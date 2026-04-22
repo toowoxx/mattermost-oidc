@@ -1,14 +1,13 @@
-# Mattermost OIDC SSO Provider
+# OIDC SSO Provider for Mattermost
 
-A generic OpenID Connect (OIDC) SSO provider for Mattermost that works with any OIDC-compliant identity provider.
+A generic OpenID Connect (OIDC) SSO provider for Mattermost. Any OIDC-compliant IdP should work; we have only verified it against Entra ID (Azure AD).
 
 ## Features
 
-- **Universal OIDC Support**: Works with Keycloak, Auth0, GitLab, Azure AD, Google, Okta, and any OIDC-compliant provider
-- **OIDC Discovery**: Automatic endpoint configuration via `.well-known/openid-configuration`
-- **User Migration**: Optional migration from GitLab SSO or password auth (email-based linking)
-- **Attribute Sync**: Automatic user attribute synchronization on each login
-- **Minimal Fork Changes**: Small patch to the Mattermost fork (see `patches/`)
+- OIDC Discovery: authorization, token, and userinfo endpoints resolved from `.well-known/openid-configuration`
+- Account linking: existing Mattermost accounts with a matching email are linked to OIDC on first login
+- Attribute sync on each login (via Mattermost's OAuth flow)
+- Delivered as a Go module plus a small patch against upstream Mattermost — no fork
 
 ## Compatibility
 
@@ -17,7 +16,7 @@ A generic OpenID Connect (OIDC) SSO provider for Mattermost that works with any 
 
 ## Quick Start
 
-### 1. Clone or download this repository
+### 1. Clone this repository
 
 ```bash
 git clone https://github.com/toowoxx/mattermost-oidc.git
@@ -89,6 +88,7 @@ In `config.json` or via environment variables:
 ```
 
 Or using environment variables:
+
 ```bash
 MM_OPENIDSETTINGS_ENABLE=true
 MM_OPENIDSETTINGS_ID=your-client-id
@@ -104,11 +104,7 @@ make build
 ./bin/mattermost server
 ```
 
-## Documentation
-
-- [Admin Guide](docs/admin-guide.md) - Configuration reference and setup instructions
-- [Migration Guide](docs/migration-guide.md) - Migrating from GitLab SSO or password auth
-- [Deployment Guide](docs/deployment-guide.md) - Docker and production deployment
+See [docs/deployment-guide.md](docs/deployment-guide.md) for the Docker build.
 
 ## Configuration Reference
 
@@ -117,10 +113,10 @@ make build
 | `Enable` | bool | `false` | Enable OIDC authentication |
 | `Id` | string | `""` | OAuth client ID |
 | `Secret` | string | `""` | OAuth client secret |
-| `DiscoveryEndpoint` | string | `""` | OIDC discovery URL (recommended) |
-| `AuthEndpoint` | string | `""` | Authorization endpoint (if not using discovery) |
-| `TokenEndpoint` | string | `""` | Token endpoint (if not using discovery) |
-| `UserAPIEndpoint` | string | `""` | UserInfo endpoint (if not using discovery) |
+| `DiscoveryEndpoint` | string | `""` | OIDC discovery URL. When set, `AuthEndpoint`/`TokenEndpoint`/`UserAPIEndpoint` are resolved from it. |
+| `AuthEndpoint` | string | `""` | Authorization endpoint (ignored if `DiscoveryEndpoint` is set) |
+| `TokenEndpoint` | string | `""` | Token endpoint (ignored if `DiscoveryEndpoint` is set) |
+| `UserAPIEndpoint` | string | `""` | UserInfo endpoint (ignored if `DiscoveryEndpoint` is set) |
 | `Scope` | string | `"openid email profile"` | OAuth scopes to request |
 | `ButtonText` | string | `"OpenID Connect"` | Login button text |
 | `ButtonColor` | string | `"#145DBF"` | Login button color |
@@ -130,22 +126,40 @@ make build
 | OIDC Claim | Mattermost Field | Notes |
 |------------|------------------|-------|
 | `sub` | `AuthData` | Unique user identifier (required) |
-| `email` | `Email` | User email (required, lowercased) |
-| `preferred_username` | `Username` | Cleaned via `CleanUsername` |
-| `given_name` | `FirstName` | First name |
-| `family_name` | `LastName` | Last name |
-| `name` | `FirstName` + `LastName` | Split if structured names unavailable |
+| `email` | `Email` | Required, lowercased |
+| `email_verified` | `EmailVerified` | Passed through from the IdP |
+| `preferred_username` | `Username` | Sanitized via `CleanUsername`; falls back to the local part of `email` |
+| `given_name` | `FirstName` | |
+| `family_name` | `LastName` | |
+| `name` | `FirstName` + `LastName` | Used when `given_name`/`family_name` are absent; split on the first space |
+
+## Identity Provider Setup
+
+Entra ID (Azure AD) is what we use:
+
+1. Register a new application in Entra ID.
+2. Set the redirect URI to `https://your-mattermost.com/signup/openid/complete`.
+3. Create a client secret.
+4. Discovery endpoint: `https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration`.
+
+Other OIDC-compliant IdPs should work the same way — point at their discovery endpoint and supply client ID/secret. We just haven't run them.
+
+## Account Linking
+
+With the patch applied, `IsSameUser` allows an existing Mattermost user (any non-OIDC auth service) to be linked to their OIDC account on first login if the email matches. This is always-on — there is no toggle.
+
+**Verified cases:** GitLab → OIDC and password/email auth → OIDC.
+
+Other source services (google, office365, saml, ldap) are handled symmetrically in code (`openid/openid.go`), but we have not exercised those paths in production.
+
+To disable linking, revert the `server/channels/app/user.go` hunk in the patch. The `main.go`, `client.go`, and `go.mod` hunks are required regardless.
 
 ## Security
 
-- **State Validation**: Built into Mattermost OAuth core (3-factor validation)
-- **Stable Identifiers**: Uses OIDC `sub` claim (never email/username which can change)
-- **HTTPS**: All OIDC endpoints must use HTTPS
+- State parameter validation is handled by Mattermost's OAuth core (timestamp, nonce, signature; one-time use; 30-minute expiry).
+- `sub` is used as `AuthData` — a stable identifier that does not change when the user's email or username changes.
+- HTTPS is required for OIDC endpoints in production.
 
 ## License
 
-AGPL-3.0 - See [LICENSE](LICENSE) for details.
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
+AGPL-3.0 — see [LICENSE](LICENSE).
