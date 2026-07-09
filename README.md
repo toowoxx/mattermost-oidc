@@ -11,7 +11,8 @@ A generic OpenID Connect (OIDC) SSO provider for Mattermost. Any OIDC-compliant 
 
 ## Compatibility
 
-- Mattermost v11.2.4 (the version the current patch targets)
+- Mattermost v11.3.3 (the version the current patch targets)
+- Mattermost v11.2.4 also supported via [`patches/mattermost-v11.2.4.patch`](patches/mattermost-v11.2.4.patch)
 - Mattermost v11.1.3 also supported via [`patches/mattermost-v11.1.3.patch`](patches/mattermost-v11.1.3.patch)
 - Mattermost v11.0.7 also supported via [`patches/mattermost-v11.0.7.patch`](patches/mattermost-v11.0.7.patch)
 - Mattermost v10.11.10 also supported via [`patches/mattermost-v10.11.10.patch`](patches/mattermost-v10.11.10.patch)
@@ -41,13 +42,13 @@ go build ./...
 There is no Mattermost fork — the integration is a `git apply` against an upstream checkout. Clone it as a sibling of this repository:
 
 ```bash
-git clone --depth 1 --branch v11.2.4 https://github.com/mattermost/mattermost.git ../mattermost
+git clone --depth 1 --branch v11.3.3 https://github.com/mattermost/mattermost.git ../mattermost
 ```
 
 Apply the OIDC patch. It adds the `go.mod` `require`/`replace`, the `main.go` blank import, removes the email-user guard in `user.go`, and opens the OpenID frontend props without a license check:
 
 ```bash
-cd ../mattermost && git apply ../mattermost-oidc/patches/mattermost-v11.2.4.patch
+cd ../mattermost && git apply ../mattermost-oidc/patches/mattermost-v11.3.3.patch
 ```
 
 (Optional) For an AGPL-only build, remove the enterprise directory and strip its import:

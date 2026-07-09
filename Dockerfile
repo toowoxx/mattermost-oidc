@@ -1,4 +1,4 @@
-ARG MM_VERSION=11.2.4
+ARG MM_VERSION=11.3.3
 ARG MM_CLONE_URL=https://github.com/mattermost/mattermost.git
 
 # Build stage - compile Mattermost server with OIDC support
@@ -17,7 +17,7 @@ COPY . mattermost-oidc/
 
 RUN rm -rf /build/mattermost/server/enterprise \
     && cd /build/mattermost \
-    && git apply /build/mattermost-oidc/patches/mattermost-v11.2.4.patch \
+    && git apply /build/mattermost-oidc/patches/mattermost-v${MM_VERSION}.patch \
     && sed -i '/Enterprise Imports/d; /github.com\/mattermost\/mattermost\/server\/v8\/enterprise/d' \
     server/cmd/mattermost/main.go
 
@@ -26,6 +26,7 @@ go 1.24.6
 
 use (
     ./mattermost/server
+    ./mattermost/server/public
     ./mattermost-oidc
 )
 GOWORK

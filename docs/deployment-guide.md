@@ -8,7 +8,7 @@ Build Mattermost locally with the OIDC module. There is no Mattermost fork — t
 
 ```bash
 # Clone upstream Mattermost at the version the patch targets
-git clone --depth 1 --branch v11.0.7 https://github.com/mattermost/mattermost.git
+git clone --depth 1 --branch v11.3.3 https://github.com/mattermost/mattermost.git
 
 # Clone the OIDC module as a sibling (not inside)
 git clone https://github.com/toowoxx/mattermost-oidc.git
@@ -16,7 +16,7 @@ git clone https://github.com/toowoxx/mattermost-oidc.git
 # Apply the OIDC patch (go.mod require/replace, main.go import,
 # user.go email-migration change, and client.go license-gate bypass)
 cd mattermost
-git apply ../mattermost-oidc/patches/mattermost-v11.0.7.patch
+git apply ../mattermost-oidc/patches/mattermost-v11.3.3.patch
 
 # (Optional) AGPL-only build: remove enterprise and strip its import
 rm -rf server/enterprise
@@ -50,8 +50,8 @@ GOPRIVATE='github.com/mattermost/*' make build-linux-amd64
 The `Dockerfile` at the root of this repository does the same thing inside a container: clones upstream at the version in `MM_VERSION`, applies the patch, strips the enterprise directory, and builds a team-edition binary on Alpine.
 
 ```bash
-docker build --build-arg MM_VERSION=10.11.10 -t your-registry/mattermost-oidc:10.11.10 .
-docker push your-registry/mattermost-oidc:10.11.10
+docker build -t your-registry/mattermost-oidc:11.3.3 .
+docker push your-registry/mattermost-oidc:11.3.3
 ```
 
 The image exposes `8065` and runs `mattermost server` as a non-root user.

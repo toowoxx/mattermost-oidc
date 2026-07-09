@@ -1,0 +1,59 @@
+diff --git a/server/channels/app/user.go b/server/channels/app/user.go
+index 9c8bf0bb53..d7c688da51 100644
+--- a/server/channels/app/user.go
++++ b/server/channels/app/user.go
+@@ -460,9 +460,6 @@ func (a *App) CreateOAuthUser(rctx request.CTX, service string, userData io.Read
+ 
+ 	userByEmail, _ := a.ch.srv.userService.GetUserByEmail(user.Email)
+ 	if userByEmail != nil {
+-		if userByEmail.AuthService == "" {
+-			return nil, model.NewAppError("CreateOAuthUser", "api.user.create_oauth_user.already_attached.app_error", map[string]any{"Service": service, "Auth": model.UserAuthServiceEmail}, "email="+user.Email, http.StatusBadRequest)
+-		}
+ 		if provider.IsSameUser(rctx, userByEmail, user) {
+ 			if _, err := a.Srv().Store().User().UpdateAuthData(userByEmail.Id, user.AuthService, user.AuthData, "", false); err != nil {
+ 				// if the user is not updated, write a warning to the log, but don't prevent user login
+diff --git a/server/cmd/mattermost/main.go b/server/cmd/mattermost/main.go
+index 5fb4b4a005..7c38d2aa5a 100644
+--- a/server/cmd/mattermost/main.go
++++ b/server/cmd/mattermost/main.go
+@@ -12,6 +12,9 @@ import (
+ 	// Plugins
+ 	_ "github.com/mattermost/mattermost/server/v8/channels/app/oauthproviders/gitlab"
+ 
++	// OIDC SSO Provider
++	_ "github.com/toowoxx/mattermost-oidc/openid"
++
+ 	// Enterprise Imports
+ 	_ "github.com/mattermost/mattermost/server/v8/enterprise"
+ )
+diff --git a/server/config/client.go b/server/config/client.go
+index 0f85475736..6632456a36 100644
+--- a/server/config/client.go
++++ b/server/config/client.go
+@@ -353,9 +353,10 @@ func GenerateLimitedClientConfig(c *model.Config, telemetryID string, license *m
+ 	props["SamlLoginButtonTextColor"] = ""
+ 	props["EnableSignUpWithGoogle"] = "false"
+ 	props["EnableSignUpWithOffice365"] = "false"
+-	props["EnableSignUpWithOpenId"] = "false"
+-	props["OpenIdButtonText"] = ""
+-	props["OpenIdButtonColor"] = ""
++	// OIDC module: expose OpenID SSO settings without license
++	props["EnableSignUpWithOpenId"] = strconv.FormatBool(*c.OpenIdSettings.Enable)
++	props["OpenIdButtonColor"] = *c.OpenIdSettings.ButtonColor
++	props["OpenIdButtonText"] = *c.OpenIdSettings.ButtonText
+ 	props["CWSURL"] = ""
+ 	props["EnableCustomBrand"] = strconv.FormatBool(*c.TeamSettings.EnableCustomBrand)
+ 	props["CustomBrandText"] = *c.TeamSettings.CustomBrandText
+diff --git a/server/go.mod b/server/go.mod
+index 4e199a33e2..48fa73a5c4 100644
+--- a/server/go.mod
++++ b/server/go.mod
+@@ -232,3 +232,8 @@ replace github.com/olekukonko/tablewriter => github.com/olekukonko/tablewriter v
+ 
+ // See MM-66167 for more details.
+ replace github.com/vmihailenco/msgpack/v5 => github.com/mattermost/msgpack/v5 v5.0.0-20260120151306-2f9c67d7e57f
++
++// OIDC SSO Provider - local development
++require github.com/toowoxx/mattermost-oidc v0.0.0
++
++replace github.com/toowoxx/mattermost-oidc => ../../mattermost-oidc
