@@ -338,7 +338,7 @@ func TestOpenIDProvider_GetUserFromJSON(t *testing.T) {
 	}`
 
 	// Create a mock context
-	user, err := provider.GetUserFromJSON(nil, bytes.NewReader([]byte(jsonData)), nil)
+	user, err := provider.GetUserFromJSON(nil, bytes.NewReader([]byte(jsonData)), nil, nil)
 	if err != nil {
 		t.Fatalf("GetUserFromJSON failed: %v", err)
 	}
@@ -355,7 +355,7 @@ func TestOpenIDProvider_GetUserFromJSON(t *testing.T) {
 func TestOpenIDProvider_GetUserFromJSON_InvalidJSON(t *testing.T) {
 	provider := &OpenIDProvider{}
 
-	_, err := provider.GetUserFromJSON(nil, strings.NewReader("invalid json"), nil)
+	_, err := provider.GetUserFromJSON(nil, strings.NewReader("invalid json"), nil, nil)
 	if err == nil {
 		t.Error("Expected error for invalid JSON")
 	}
@@ -367,14 +367,14 @@ func TestOpenIDProvider_GetUserFromJSON_MissingClaims(t *testing.T) {
 
 	// Missing sub
 	jsonData := `{"email": "test@example.com"}`
-	_, err := provider.GetUserFromJSON(nil, strings.NewReader(jsonData), nil)
+	_, err := provider.GetUserFromJSON(nil, strings.NewReader(jsonData), nil, nil)
 	if err == nil {
 		t.Error("Expected error for missing sub claim")
 	}
 
 	// Missing email
 	jsonData = `{"sub": "user-123"}`
-	_, err = provider.GetUserFromJSON(nil, strings.NewReader(jsonData), nil)
+	_, err = provider.GetUserFromJSON(nil, strings.NewReader(jsonData), nil, nil)
 	if err == nil {
 		t.Error("Expected error for missing email claim")
 	}

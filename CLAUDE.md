@@ -24,11 +24,18 @@ The patch makes exactly four logical changes:
 
 ## Porting to a new Mattermost version
 
-The `openid/` module code is almost always **interface-stable** — the
-`OAuthProvider` interface did not change v10.11 → v11.0, so a port is usually
+The `openid/` module code is usually **interface-stable**, so a port is usually
 "regenerate the patch + bump the go.work," not "audit the module." Check
 `server/einterfaces/oauthproviders.go` in the target version; only touch
 `openid/` if that interface changed.
+
+It *did* change once: **v11.6** (MM-63393) gave `GetUserFromJSON` a fourth
+parameter, `settings *model.SSOSettings`, so providers can honor the new
+`OpenIdSettings.UsePreferredUsername` toggle. The module was adapted at this
+commit; it accepts the parameter and deliberately ignores it (see the doc
+comment in `openid/openid.go` for why). Consequence: the module at HEAD only
+compiles against v11.6+, so the **patches for v11.5.7 and older must be used
+with this repository checked out at the commit that introduced them**.
 
 ### Step 1 — regenerate the patch (it WILL fail to apply cleanly)
 
@@ -87,10 +94,12 @@ cd ../mattermost/server && GOPRIVATE='github.com/mattermost/*' make build
 
 ## Gotchas worth not relearning
 
-- **`openid/go.mod` pins a stale pseudo-version** (e.g. an old v10.11 commit).
-  Don't bump it and don't panic about the mismatch — the real build resolves
-  `server/v8` and `server/public` via go.work/`replace`, which override the pin
-  entirely. It only matters for `go test ./...` inside this repo standalone.
+- **The module pins a fixed upstream pseudo-version** — currently the v11.6.6
+  commit `aa548ce407da`. Don't bump it on a routine port and don't panic about a
+  mismatch with the target tag: the real build resolves `server/v8` and
+  `server/public` via go.work/`replace`, which override the pin entirely. It only
+  matters for `go test ./...` inside this repo standalone, so bump it only when
+  the `OAuthProvider` interface changes again.
 - **Downstream builds pin this repo by commit, not a branch or tarball.** After
   changing the patch here, push first; a consumer that clones at a pinned commit
   only picks up the change once that pin is bumped.

@@ -34,7 +34,15 @@ func init() {
 
 // GetUserFromJSON parses the UserInfo response from the OIDC provider.
 // This is called after the OAuth token exchange when fetching user info.
-func (p *OpenIDProvider) GetUserFromJSON(rctx request.CTX, data io.Reader, tokenUser *model.User) (*model.User, error) {
+//
+// The settings parameter arrived in Mattermost v11.6 (MM-63393) so providers can
+// opt into the new OpenIdSettings.UsePreferredUsername toggle. We deliberately
+// ignore it: that toggle exists for GitLab, which has its own "username" field and
+// treats preferred_username only as an alternative. For pure OIDC,
+// preferred_username *is* the standard username claim, and this provider has always
+// used it as the primary source (falling back to the email local part). Honoring the
+// off-by-default toggle would silently change usernames in existing deployments.
+func (p *OpenIDProvider) GetUserFromJSON(rctx request.CTX, data io.Reader, tokenUser *model.User, settings *model.SSOSettings) (*model.User, error) {
 	claims, err := ParseOIDCClaims(data)
 	if err != nil {
 		return nil, err
