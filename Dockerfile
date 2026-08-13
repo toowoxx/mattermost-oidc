@@ -1,4 +1,4 @@
-ARG MM_VERSION=11.4.5
+ARG MM_VERSION=11.5.7
 ARG MM_CLONE_URL=https://github.com/mattermost/mattermost.git
 
 # Build stage - compile Mattermost server with OIDC support
