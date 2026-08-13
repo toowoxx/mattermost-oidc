@@ -1,8 +1,8 @@
-ARG MM_VERSION=11.3.3
+ARG MM_VERSION=11.4.5
 ARG MM_CLONE_URL=https://github.com/mattermost/mattermost.git
 
 # Build stage - compile Mattermost server with OIDC support
-FROM golang:1.24.6-alpine AS server-builder
+FROM golang:1.25.8-alpine AS server-builder
 
 RUN apk add --no-cache git gcc musl-dev
 
@@ -22,7 +22,7 @@ RUN rm -rf /build/mattermost/server/enterprise \
     server/cmd/mattermost/main.go
 
 RUN cat > /build/go.work <<'GOWORK'
-go 1.24.6
+go 1.25.8
 
 use (
     ./mattermost/server

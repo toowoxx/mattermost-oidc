@@ -11,12 +11,13 @@ A generic OpenID Connect (OIDC) SSO provider for Mattermost. Any OIDC-compliant 
 
 ## Compatibility
 
-- Mattermost v11.3.3 (the version the current patch targets)
+- Mattermost v11.4.5 (the version the current patch targets)
+- Mattermost v11.3.3 also supported via [`patches/mattermost-v11.3.3.patch`](patches/mattermost-v11.3.3.patch)
 - Mattermost v11.2.4 also supported via [`patches/mattermost-v11.2.4.patch`](patches/mattermost-v11.2.4.patch)
 - Mattermost v11.1.3 also supported via [`patches/mattermost-v11.1.3.patch`](patches/mattermost-v11.1.3.patch)
 - Mattermost v11.0.7 also supported via [`patches/mattermost-v11.0.7.patch`](patches/mattermost-v11.0.7.patch)
 - Mattermost v10.11.10 also supported via [`patches/mattermost-v10.11.10.patch`](patches/mattermost-v10.11.10.patch)
-- Go 1.24.6+
+- Go 1.25.8+
 
 > **Why this exists**: Mattermost Team Edition (the libre/AGPL build) ships SAML, Google, and Microsoft 365 SSO behind an enterprise license — only GitLab SSO is enabled there. Many self-hosted deployments worked around this by pointing Mattermost's GitLab SSO at a GitLab instance that itself federated to the real IdP. In v11.0, GitLab SSO has also been moved out of Team Edition, so even that workaround is gone. This module restores OIDC directly in Team Edition, letting Mattermost talk to any OIDC IdP without a license or a GitLab intermediary.
 
@@ -42,13 +43,13 @@ go build ./...
 There is no Mattermost fork — the integration is a `git apply` against an upstream checkout. Clone it as a sibling of this repository:
 
 ```bash
-git clone --depth 1 --branch v11.3.3 https://github.com/mattermost/mattermost.git ../mattermost
+git clone --depth 1 --branch v11.4.5 https://github.com/mattermost/mattermost.git ../mattermost
 ```
 
 Apply the OIDC patch. It adds the `go.mod` `require`/`replace`, the `main.go` blank import, removes the email-user guard in `user.go`, and opens the OpenID frontend props without a license check:
 
 ```bash
-cd ../mattermost && git apply ../mattermost-oidc/patches/mattermost-v11.3.3.patch
+cd ../mattermost && git apply ../mattermost-oidc/patches/mattermost-v11.4.5.patch
 ```
 
 (Optional) For an AGPL-only build, remove the enterprise directory and strip its import:
@@ -64,7 +65,7 @@ Create a `go.work` in the common parent so the server resolves `mattermost-oidc`
 ```bash
 cd ..
 cat > go.work <<'EOF'
-go 1.24.6
+go 1.25.8
 
 use (
     ./mattermost/server
