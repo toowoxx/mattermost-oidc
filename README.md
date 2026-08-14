@@ -11,7 +11,8 @@ A generic OpenID Connect (OIDC) SSO provider for Mattermost. Any OIDC-compliant 
 
 ## Compatibility
 
-- Mattermost v11.8.5 (the version the current patch targets)
+- Mattermost v11.9.1 (the version the current patch targets)
+- Mattermost v11.8.5 also supported via [`patches/mattermost-v11.8.5.patch`](patches/mattermost-v11.8.5.patch)
 - Mattermost v11.7.9 also supported via [`patches/mattermost-v11.7.9.patch`](patches/mattermost-v11.7.9.patch)
 - Mattermost v11.6.6 also supported via [`patches/mattermost-v11.6.6.patch`](patches/mattermost-v11.6.6.patch)
 - Mattermost v11.5.7 also supported via [`patches/mattermost-v11.5.7.patch`](patches/mattermost-v11.5.7.patch)
@@ -21,7 +22,7 @@ A generic OpenID Connect (OIDC) SSO provider for Mattermost. Any OIDC-compliant 
 - Mattermost v11.1.3 also supported via [`patches/mattermost-v11.1.3.patch`](patches/mattermost-v11.1.3.patch)
 - Mattermost v11.0.7 also supported via [`patches/mattermost-v11.0.7.patch`](patches/mattermost-v11.0.7.patch)
 - Mattermost v10.11.10 also supported via [`patches/mattermost-v10.11.10.patch`](patches/mattermost-v10.11.10.patch)
-- Go 1.26.3+
+- Go 1.26.4+
 
 > **Older patches need an older checkout**: Mattermost v11.6 changed the
 > `einterfaces.OAuthProvider` interface (`GetUserFromJSON` gained a
@@ -53,13 +54,13 @@ go build ./...
 There is no Mattermost fork — the integration is a `git apply` against an upstream checkout. Clone it as a sibling of this repository:
 
 ```bash
-git clone --depth 1 --branch v11.8.5 https://github.com/mattermost/mattermost.git ../mattermost
+git clone --depth 1 --branch v11.9.1 https://github.com/mattermost/mattermost.git ../mattermost
 ```
 
 Apply the OIDC patch. It adds the `go.mod` `require`/`replace`, the `main.go` blank import, removes the email-user guard in `user.go`, and opens the OpenID frontend props without a license check:
 
 ```bash
-cd ../mattermost && git apply ../mattermost-oidc/patches/mattermost-v11.8.5.patch
+cd ../mattermost && git apply ../mattermost-oidc/patches/mattermost-v11.9.1.patch
 ```
 
 (Optional) For an AGPL-only build, remove the enterprise directory and strip its import:
@@ -75,7 +76,7 @@ Create a `go.work` in the common parent so the server resolves `mattermost-oidc`
 ```bash
 cd ..
 cat > go.work <<'EOF'
-go 1.26.3
+go 1.26.4
 
 use (
     ./mattermost/server
