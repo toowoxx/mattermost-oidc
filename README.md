@@ -14,6 +14,7 @@ A generic OpenID Connect (OIDC) SSO provider for Mattermost. Any OIDC-compliant 
 - Mattermost v11.10.0 (the version the current patch targets)
 - Mattermost v11.9.1 also supported via [`patches/mattermost-v11.9.1.patch`](patches/mattermost-v11.9.1.patch)
 - Mattermost v11.8.5 also supported via [`patches/mattermost-v11.8.5.patch`](patches/mattermost-v11.8.5.patch)
+- Mattermost v11.7.15 also supported via [`patches/mattermost-v11.7.15.patch`](patches/mattermost-v11.7.15.patch)
 - Mattermost v11.7.9 also supported via [`patches/mattermost-v11.7.9.patch`](patches/mattermost-v11.7.9.patch)
 - Mattermost v11.6.6 also supported via [`patches/mattermost-v11.6.6.patch`](patches/mattermost-v11.6.6.patch)
 - Mattermost v11.5.7 also supported via [`patches/mattermost-v11.5.7.patch`](patches/mattermost-v11.5.7.patch)
